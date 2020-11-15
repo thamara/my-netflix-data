@@ -14,7 +14,7 @@ def durationTimeToSeconds(duration):
     except:
         return 0
 
-# 65 -> 00:01
+# 65 -> 00:01:05
 def secondsToDurantion(seconds):
     hours = math.floor(seconds/3600)
     remainingSeconds = seconds - (hours*3600)
@@ -125,8 +125,8 @@ def generateHTMLPage(outputDir, profiles, moviesWatchedTimes, seriesWatchedTime)
             for season in seasons:
                 for episode in seasons[season]:
                     totalWatchedTime += seriesWatchedTime[profile][item][season][episode]
-            watchedTableInfo.append(dict(profile=profile, movie=item, type='Series',
-                                         total_seconds=totalWatchedTime, count=secondsToDurantion(totalWatchedTime)))
+            watchedTableInfo.append(dict(profile=profile, title=item, type='Series',
+                                         total_seconds=totalWatchedTime, total_time=secondsToDurantion(totalWatchedTime)))
 
     loader = jinja2.FileSystemLoader('netflix-data-template.html')
     env = jinja2.Environment(loader=loader)
@@ -170,6 +170,7 @@ def main():
     args = get_arguments()
     data = parseNetflixData(args.input)
     [profiles, movies, series] = getMoviesAndSeriesObj(data)
+    print(series)
     generateJsonForVisualization(args.output, profiles, movies, series)
     generateHTMLPage(args.output, profiles, movies, series)
 

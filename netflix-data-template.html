@@ -293,9 +293,9 @@
                     {% for item in watched_table %}
                     <tr>
                         <td>{{item.profile}}</td>
-                        <td>{{item.movie}}</td>
+                        <td>{{item.title}}</td>
                         <td>{{item.type}}</td>
-                        <td data-order="{{item.total_seconds}}">{{item.count}}</td>
+                        <td data-order="{{item.total_seconds}}">{{item.total_time}}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
