@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>My Netflix Data</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.22/css/dataTables.bootstrap4.min.css">
+
+
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.22/js/dataTables.bootstrap4.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Montserrat:400,700');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1em;
+            background-color: rgb(39, 39, 39);
+            color: white;
+        }
+
+        #visualization {
+            font-size: 11px;
+        }
+
+        .slice {
+            cursor: pointer;
+        }
+
+        .slice .main-arc {
+            stroke: #fff;
+            stroke-width: 1px;
+        }
+
+        .slice .hidden-arc {
+            fill: none;
+        }
+
+        .slice text {
+            pointer-events: none;
+            dominant-baseline: middle;
+            text-anchor: middle;
+        }
+
+        .container {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+
+        .header {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .site-header {
+            text-align: left;
+        }
+
+        .site-header h1 {
+            font-size: 4rem;
+        }
+
+        .site-details {
+            font-size: 1rem;
+        }
+
+        .site-details p {
+            margin-bottom: 0px;
+            text-align: right;
+        }
+    </style>
+    <script src='https://d3js.org/d3.v4.min.js'></script>
+    <script>
+        $(document).ready(function () {
+            $('#watched-table').DataTable({ "order": [[3, "desc"]] });
+            function generateVisualization() {
+                const width = (window.innerWidth - 40),
+                    height = (window.innerHeight - 40),
+                    maxRadius = (Math.min(width, height) / 2) - 5;
+
+                const x = d3.scaleLinear()
+                    .range([0, 2 * Math.PI])
+                    .clamp(true);
+
+                const y = d3.scaleSqrt()
+                    .range([maxRadius * .1, maxRadius]);
+
+                const color = d3.scaleOrdinal(d3.schemeCategory20);
+
+                const partition = d3.partition();
+
+                const arc = d3.arc()
+                    .startAngle(d => x(d.x0))
+                    .endAngle(d => x(d.x1))
+                    .innerRadius(d => Math.max(0, y(d.y0)))
+                    .outerRadius(d => Math.max(0, y(d.y1)));
+
+                const middleArcLine = d => {
+                    const halfPi = Math.PI / 2;
+                    const angles = [x(d.x0) - halfPi, x(d.x1) - halfPi];
+                    const r = Math.max(0, (y(d.y0) + y(d.y1)) / 2);
+
+                    const middleAngle = (angles[1] + angles[0]) / 2;
+                    const invertDirection = middleAngle > 0 && middleAngle < Math.PI; // On lower quadrants write text ccw
+                    if (invertDirection) { angles.reverse(); }
+
+                    const path = d3.path();
+                    path.arc(0, 0, r, angles[0], angles[1], invertDirection);
+                    return path.toString();
+                };
+
+                const textFits = d => {
+                    if (!d) { return true; }
+                    const CHAR_SPACE = 6;
+
+                    const deltaAngle = x(d.x1) - x(d.x0);
+                    const r = Math.max(0, (y(d.y0) + y(d.y1)) / 2);
+                    const perimeter = r * deltaAngle;
+
+                    return d.data.name.length * CHAR_SPACE < perimeter;
+                };
+
+                const titleText = d => {
+                    const hours = Math.floor(d.value / 3600);
+                    const remainingSeconds = d.value - (hours * 3600);
+                    const minutes = Math.floor(remainingSeconds / 60);
+                    return `${d.data.name}\n${hours} hours ${minutes} minutes`;
+                };
+
+                let svg = d3.select('#visualization').append('svg')
+                    .style('width', '100vw')
+                    .style('height', '100vh')
+                    .attr('viewBox', `${-width / 2} ${-height / 2} ${width} ${height}`)
+                    .on('click', () => focusOn()); // Reset zoom on canvas click
+
+                d3.json('netflix-data-to-visualize.json', (error, root) => {
+                    if (error) throw error;
+
+                    root = d3.hierarchy(root);
+                    root.sum(d => d.value);
+
+                    const slice = svg.selectAll('g.slice')
+                        .data(partition(root).descendants());
+
+                    slice.exit().remove();
+
+                    const newSlice = slice.enter()
+                        .append('g').attr('class', 'slice')
+                        .on('click', d => {
+                            d3.event.stopPropagation();
+                            focusOn(d);
+                        });
+
+                    newSlice.append('title')
+                        .text(titleText);
+
+                    newSlice.append('path')
+                        .attr('class', 'main-arc')
+                        .style('fill', d => color((d.children ? d : d.parent).data.name))
+                        .attr('d', arc);
+
+                    newSlice.append('path')
+                        .attr('class', 'hidden-arc')
+                        .attr('id', (_, i) => `hiddenArc${i}`)
+                        .attr('d', middleArcLine);
+
+                    const text = newSlice.append('text')
+                        .attr('display', d => textFits(d) ? null : 'none');
+
+                    // Add white contour
+                    text.append('textPath')
+                        .attr('startOffset', '50%')
+                        .attr('xlink:href', (_, i) => `#hiddenArc${i}`)
+                        .text(d => d.data.name)
+                        .style('fill', 'none')
+                        .style('stroke', '#fff')
+                        .style('stroke-width', 5)
+                        .style('stroke-linejoin', 'round');
+
+                    text.append('textPath')
+                        .attr('startOffset', '50%')
+                        .attr('xlink:href', (_, i) => `#hiddenArc${i}`)
+                        .text(d => d.data.name);
+                });
+
+                svg.append("text")
+                    .attr("x", -maxRadius - (width / 7))
+                    .attr("y", -maxRadius + 10 + (20 * 0))
+                    .text("Click on any arc to zoom in.")
+                    .style("font-size", "15px")
+                    .style("color", "white")
+                    .style("fill", "white")
+                    .attr("alignment-baseline", "middle")
+
+                svg.append("text")
+                    .attr("x", -maxRadius - (width / 7))
+                    .attr("y", -maxRadius + 10 + (20 * 1))
+                    .text("Click on the center circle to zoom out.")
+                    .style("font-size", "15px")
+                    .style("color", "white")
+                    .style("fill", "white")
+                    .attr("alignment-baseline", "middle")
+
+                svg.append("text")
+                    .attr("x", -maxRadius - (width / 7))
+                    .attr("y", -maxRadius + 10 + (20 * 2))
+                    .text("Click on canvas background to reset zoom.")
+                    .style("font-size", "15px")
+                    .style("color", "white")
+                    .style("fill", "white")
+                    .attr("alignment-baseline", "middle")
+
+                function focusOn(d = { x0: 0, x1: 1, y0: 0, y1: 1 }) {
+                    // Reset to top-level if no data point specified
+
+                    const transition = svg.transition()
+                        .duration(300)
+                        .tween('scale', () => {
+                            const xd = d3.interpolate(x.domain(), [d.x0, d.x1]),
+                                yd = d3.interpolate(y.domain(), [d.y0, 1]);
+                            return t => { x.domain(xd(t)); y.domain(yd(t)); };
+                        });
+
+                    transition.selectAll('path.main-arc')
+                        .attrTween('d', d => () => arc(d));
+
+                    transition.selectAll('path.hidden-arc')
+                        .attrTween('d', d => () => middleArcLine(d));
+
+                    transition.selectAll('text')
+                        .attrTween('display', d => () => textFits(d) ? null : 'none');
+
+                    moveStackToFront(d);
+
+                    function moveStackToFront(elD) {
+                        svg.selectAll('.slice').filter(d => d === elD)
+                            .each(function (d) {
+                                this.parentNode.appendChild(this);
+                                if (d.parent) { moveStackToFront(d.parent); }
+                            })
+                    }
+                }
+            }
+            generateVisualization();
+        });
+    </script>
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="row header">
+            <div class="col-7 site-header">
+                <h1>My Netflix Data</h1>
+                <p>Wondering how much time you dedicated to Netflix?</p>
+            </div>
+            <div class="col-5 site-details">
+                <p>Check out the blog post where I explain the process behind this and how you can see your own data.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+    </script>
+
+    <div id="visualization"></div>
+
+    <div class="container">
+        <h2>Watched items</h1>
+            <table id="watched-table" class="table table-striped table-bordered" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Profile</th>
+                        <th>Movie</th>
+                        <th>Type</th>
+                        <th>Watched time (HH:MM:SS)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in watched_table %}
+                    <tr>
+                        <td>{{item.profile}}</td>
+                        <td>{{item.movie}}</td>
+                        <td>{{item.type}}</td>
+                        <td data-order="{{item.total_seconds}}">{{item.count}}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+    </div>
+
+</body>
+
+</html>
