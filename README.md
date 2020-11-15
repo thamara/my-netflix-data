@@ -4,7 +4,7 @@ See how much time are you spending in a given show.
 
 You can check an example page [here](https://thamara-my-netflix-data.netlify.app/).
 
-![screencapture-my-netflix-data.png]
+![Screen capture of the output page](screencapture-my-netflix-data.png)
 
 ## Instructions
 
