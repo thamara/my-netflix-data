@@ -1,13 +1,16 @@
 # My Netflix Data
 
 See how much time are you spending in a given show.
-Request and download your data from [Netlix](https://www.netflix.com/account/getmyinfo).
+
+You can check an example page [here](https://thamara-my-netflix-data.netlify.app/).
+
+![screencapture-my-netflix-data.png]
 
 ## Instructions
 
 1. Have Python 3.8 installed
 2. Install Jinja: ```pip3 install Jinja2```
-3. Download the data from Netflix. The important file is ```Content_Interaction/ViewingActitivity.csv```
+3. Request and download your data from [Netlix](https://www.netflix.com/account/getmyinfo). The important file is ```Content_Interaction/ViewingActitivity.csv```.
 4. Run script: ```python3 analyze-netflix-data.py -input data/ViewingActivity.csv -output output```
 5. Open file in ```output/index.html``` in your browser.
 
