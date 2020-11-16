@@ -110,7 +110,7 @@ def getOutputFilePath(outputDir, fileName):
     return os.path.join(outputDir, fileName)
 
 
-def generateHTMLPage(outputDir, profiles, moviesWatchedTimes, seriesWatchedTime):
+def generateHTMLPage(outputDir, profiles, moviesWatchedTimes, seriesWatchedTime, visualizationData):
     # Datatable
     watchedTableInfo = []
     for profile in moviesWatchedTimes:
@@ -132,7 +132,7 @@ def generateHTMLPage(outputDir, profiles, moviesWatchedTimes, seriesWatchedTime)
     env = jinja2.Environment(loader=loader)
     with open(getOutputFilePath(outputDir, 'index.html'), 'w') as output:
         output.write(env.get_template('').render(
-            watched_table=watchedTableInfo))
+            watched_table=watchedTableInfo, visualization_data=visualizationData))
 
 
 def generateJsonForVisualization(outputDir, profiles, moviesWatchedTimes, seriesWatchedTime):
@@ -162,16 +162,15 @@ def generateJsonForVisualization(outputDir, profiles, moviesWatchedTimes, series
                                   "children": [profileMovies, profileSeries]}
         visualizationJson["children"].append(profileMoviesAndSeries)
 
-    with open(getOutputFilePath(outputDir, 'netflix-data-to-visualize.json'), 'w') as output:
-        output.write(json.dumps(visualizationJson, indent=2))
+    return visualizationJson
 
 
 def main():
     args = get_arguments()
     data = parseNetflixData(args.input)
     [profiles, movies, series] = getMoviesAndSeriesObj(data)
-    generateJsonForVisualization(args.output, profiles, movies, series)
-    generateHTMLPage(args.output, profiles, movies, series)
+    visualizationData = generateJsonForVisualization(args.output, profiles, movies, series)
+    generateHTMLPage(args.output, profiles, movies, series, visualizationData)
 
 
 if __name__ == "__main__":

@@ -82,6 +82,7 @@
     </style>
     <script src='https://d3js.org/d3.v4.min.js'></script>
     <script>
+        visualization_data = {{visualization_data}}
         $(document).ready(function () {
             $('#watched-table').DataTable({ "order": [[3, "desc"]] });
             function generateVisualization() {
@@ -144,55 +145,51 @@
                     .attr('viewBox', `${-width / 2} ${-height / 2} ${width} ${height}`)
                     .on('click', () => focusOn()); // Reset zoom on canvas click
 
-                d3.json('netflix-data-to-visualize.json', (error, root) => {
-                    if (error) throw error;
+                root = d3.hierarchy(visualization_data);
+                root.sum(d => d.value);
 
-                    root = d3.hierarchy(root);
-                    root.sum(d => d.value);
+                const slice = svg.selectAll('g.slice')
+                    .data(partition(root).descendants());
 
-                    const slice = svg.selectAll('g.slice')
-                        .data(partition(root).descendants());
+                slice.exit().remove();
 
-                    slice.exit().remove();
+                const newSlice = slice.enter()
+                    .append('g').attr('class', 'slice')
+                    .on('click', d => {
+                        d3.event.stopPropagation();
+                        focusOn(d);
+                    });
 
-                    const newSlice = slice.enter()
-                        .append('g').attr('class', 'slice')
-                        .on('click', d => {
-                            d3.event.stopPropagation();
-                            focusOn(d);
-                        });
+                newSlice.append('title')
+                    .text(titleText);
 
-                    newSlice.append('title')
-                        .text(titleText);
+                newSlice.append('path')
+                    .attr('class', 'main-arc')
+                    .style('fill', d => color((d.children ? d : d.parent).data.name))
+                    .attr('d', arc);
 
-                    newSlice.append('path')
-                        .attr('class', 'main-arc')
-                        .style('fill', d => color((d.children ? d : d.parent).data.name))
-                        .attr('d', arc);
+                newSlice.append('path')
+                    .attr('class', 'hidden-arc')
+                    .attr('id', (_, i) => `hiddenArc${i}`)
+                    .attr('d', middleArcLine);
 
-                    newSlice.append('path')
-                        .attr('class', 'hidden-arc')
-                        .attr('id', (_, i) => `hiddenArc${i}`)
-                        .attr('d', middleArcLine);
+                const text = newSlice.append('text')
+                    .attr('display', d => textFits(d) ? null : 'none');
 
-                    const text = newSlice.append('text')
-                        .attr('display', d => textFits(d) ? null : 'none');
+                // Add white contour
+                text.append('textPath')
+                    .attr('startOffset', '50%')
+                    .attr('xlink:href', (_, i) => `#hiddenArc${i}`)
+                    .text(d => d.data.name)
+                    .style('fill', 'none')
+                    .style('stroke', '#fff')
+                    .style('stroke-width', 5)
+                    .style('stroke-linejoin', 'round');
 
-                    // Add white contour
-                    text.append('textPath')
-                        .attr('startOffset', '50%')
-                        .attr('xlink:href', (_, i) => `#hiddenArc${i}`)
-                        .text(d => d.data.name)
-                        .style('fill', 'none')
-                        .style('stroke', '#fff')
-                        .style('stroke-width', 5)
-                        .style('stroke-linejoin', 'round');
-
-                    text.append('textPath')
-                        .attr('startOffset', '50%')
-                        .attr('xlink:href', (_, i) => `#hiddenArc${i}`)
-                        .text(d => d.data.name);
-                });
+                text.append('textPath')
+                    .attr('startOffset', '50%')
+                    .attr('xlink:href', (_, i) => `#hiddenArc${i}`)
+                    .text(d => d.data.name);
 
                 svg.append("text")
                     .attr("x", -maxRadius - (width / 7))
