@@ -170,7 +170,6 @@ def main():
     args = get_arguments()
     data = parseNetflixData(args.input)
     [profiles, movies, series] = getMoviesAndSeriesObj(data)
-    print(series)
     generateJsonForVisualization(args.output, profiles, movies, series)
     generateHTMLPage(args.output, profiles, movies, series)
 
