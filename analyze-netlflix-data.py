@@ -34,7 +34,7 @@ def parseNetflixData(inputFileName):
     # CSV headers:
     # Profile Name,Start Time,Duration,Attributes,Title,Supplemental Video Type,Device Type,Bookmark,Latest Bookmark,Country
     netflixData = []
-    with open(inputFileName) as netflixCSV:
+    with open(inputFileName, encoding="utf-8") as netflixCSV:
         for row in csv.reader(netflixCSV):
             supplementalVideoType = row[5]
             if len(supplementalVideoType):
@@ -130,7 +130,7 @@ def generateHTMLPage(outputDir, profiles, moviesWatchedTimes, seriesWatchedTime,
 
     loader = jinja2.FileSystemLoader('netflix-data-template.html')
     env = jinja2.Environment(loader=loader)
-    with open(getOutputFilePath(outputDir, 'index.html'), 'w') as output:
+    with open(getOutputFilePath(outputDir, 'index.html'), 'w', encoding="utf-8") as output:
         output.write(env.get_template('').render(
             watched_table=watchedTableInfo, visualization_data=visualizationData))
 
