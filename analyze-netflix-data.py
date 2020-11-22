@@ -115,8 +115,8 @@ def generateHTMLPage(outputDir, profiles, moviesWatchedTimes, seriesWatchedTime,
     watchedTableInfo = []
     for profile in moviesWatchedTimes:
         for item in moviesWatchedTimes[profile]:
-            watchedTableInfo.append(dict(profile=profile, movie=item, type='Movie',
-                                         total_seconds=moviesWatchedTimes[profile][item], count=secondsToDurantion(moviesWatchedTimes[profile][item])))
+            watchedTableInfo.append(dict(profile=profile, title=item, type='Movie',
+                                         total_seconds=moviesWatchedTimes[profile][item], total_time=secondsToDurantion(moviesWatchedTimes[profile][item])))
 
     for profile in seriesWatchedTime:
         for item in seriesWatchedTime[profile]:
